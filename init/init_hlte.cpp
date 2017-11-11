@@ -1,5 +1,6 @@
 /*
    Copyright (c) 2013, The Linux Foundation. All rights reserved.
+   Copyright (c) 2017, The LineageOS Project. All rights reserved.
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are
@@ -38,8 +39,37 @@
 
 #include "init_msm8974.h"
 
-void gsm_properties()
+void set_rild_libpath(char const *variant)
 {
+    std::string libpath("/system/vendor/lib/libsec-ril.");
+    libpath += variant;
+    libpath += ".so";
+
+    property_override("rild.libpath", libpath.c_str());
+}
+
+void cdma_properties(char const *operator_alpha,
+        char const *operator_numeric,
+        char const *default_network,
+        char const *cdma_sub,
+        char const *rild_lib_variant)
+{
+    /* Dynamic CDMA Properties */
+    property_set("ro.cdma.home.operator.alpha", operator_alpha);
+    property_set("ro.cdma.home.operator.numeric", operator_numeric);
+    property_set("ro.telephony.default_network", default_network);
+    property_set("ro.telephony.default_cdma_sub", cdma_sub);
+    set_rild_libpath(rild_lib_variant);
+
+    /* Static CDMA Properties */
+    property_set("ril.subscription.types", "NV,RUIM");
+    property_set("telephony.lteOnCdmaDevice", "1");
+}
+
+void gsm_properties(char const *rild_lib_variant)
+{
+    set_rild_libpath(rild_lib_variant);
+
     property_set("ro.telephony.default_network", "9");
     property_set("telephony.lteOnGsmDevice", "1");
 }
@@ -60,27 +90,22 @@ void init_target_properties()
 
     property_get("ro.bootloader", bootloader, NULL);
 
-    if (strstr(bootloader, "N900S")) {
-        /* hlteskt */
-        property_set("ro.build.fingerprint", "samsung/hlteskt/hlte:4.4.2/KOT49H/N900SKSUFNH4:user/release-keys");
-        property_set("ro.build.description", "hlteskt-user 4.4.2 KOT49H N900SKSUFNH4 release-keys");
-        property_set("ro.product.model", "SM-N900S");
-        property_set("ro.product.device", "hlteskt");
-        gsm_properties();
-    } else if (strstr(bootloader, "N900K")) {
-        /* hltektt */
-        property_set("ro.build.fingerprint", "samsung/hltektt/hlte:4.4.2/KOT49H/N900KKKUFNI1:user/release-keys");
-        property_set("ro.build.description", "hltektt-user 4.4.2 KOT49H N900KKKUFNI1 release-keys");
-        property_set("ro.product.model", "SM-N900K");
-        property_set("ro.product.device", "hltektt");
-        gsm_properties();
-    } else {
+    if (strstr(bootloader, "N9005")) {
         /* hltexx */
-        property_set("ro.build.fingerprint", "samsung/hltexx/hlte:4.4.2/KOT49H/N9005XXUENC2:user/release-keys");
-        property_set("ro.build.description", "hltexx-user 4.4.2 KOT49H N9005XXUENC2 release-keys");
-        property_set("ro.product.model", "SM-N9005");
-        property_set("ro.product.device", "hltexx");
-        gsm_properties();
+        property_override("ro.build.fingerprint", "samsung/hltexx/hlte:5.0/LRX21V/N9005XXSGBQD5:user/release-keys");
+        property_override("ro.build.description", "hltexx-user 5.0 LRX21V N9005XXSGBQD5 release-keys");
+        property_override("ro.product.model", "SM-N9005");
+        property_override("ro.product.device", "hlte");
+        gsm_properties("gsm");
+    } else if (strstr(bootloader, "N900P")) {
+        /* hltespr - Sprint */
+        property_override("ro.build.fingerprint", "samsung/hltespr/hltespr:5.0/LRX21V/N900PVPSEPL1:user/release-keys");
+        property_override("ro.build.description", "hltespr-user 5.0 LRX21V N900PVPSEPL1 release-keys");
+        property_override("ro.product.model", "SM-N900P");
+        property_override("ro.product.device", "hltespr");
+        cdma_properties("Sprint", "310120", "8", "1", "spr");
+    } else {
+        gsm_properties("gsm");
     }
 
     property_get("ro.product.device", device, NULL);
